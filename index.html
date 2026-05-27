@@ -97,9 +97,10 @@
             }
         ];
 
-        let indexAtual = -1; 
-        const tempoTotalLoop = playlist.reduce((soma, item) => soma + item.duracao, 0);
+        let indexAtual = 0; 
+        let timerLoop;
 
+        // Inicia a TV
         function iniciarTV() {
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('tv-display').style.display = 'block';
@@ -108,30 +109,24 @@
                 document.documentElement.requestFullscreen().catch(err => console.log(err));
             }
 
-            setInterval(motorDeSincronizacao, 250); 
+            tocarProximo(); 
         }
 
-        function motorDeSincronizacao() {
-            const agoraEmSegundos = Math.floor(Date.now() / 1000);
-            const posicaoNoLoop = agoraEmSegundos % tempoTotalLoop;
+        // Lógica sequencial simples
+        function tocarProximo() {
+            renderizarMedia(indexAtual);
 
-            let tempoAcumulado = 0;
-            let indiceEsperado = 0;
+            const mediaAtual = playlist[indexAtual];
 
-            for (let i = 0; i < playlist.length; i++) {
-                tempoAcumulado += playlist[i].duracao;
-                if (posicaoNoLoop < tempoAcumulado) {
-                    indiceEsperado = i;
-                    break;
-                }
-            }
-
-            if (indiceEsperado !== indexAtual) {
-                indexAtual = indiceEsperado;
-                renderizarMedia(indexAtual);
-            }
+            // Define o timer para pular para a próxima mídia
+            clearTimeout(timerLoop);
+            timerLoop = setTimeout(() => {
+                indexAtual = (indexAtual + 1) % playlist.length; // Volta para o início se acabar
+                tocarProximo();
+            }, mediaAtual.duracao * 1000); // Converte segundos em milissegundos
         }
 
+        // Função que cria o elemento na tela e faz a transição
         function renderizarMedia(index) {
             const container = document.getElementById('media-container');
             const media = playlist[index];
@@ -147,26 +142,18 @@
                 novoElemento.autoplay = true;
                 novoElemento.muted = true; 
                 novoElemento.loop = true;
-                
-                const agoraEmSegundos = Math.floor(Date.now() / 1000);
-                let tempoInicioVideo = (agoraEmSegundos % tempoTotalLoop);
-                let tempoGastoAnteriores = 0;
-                for(let i=0; i < index; i++) tempoGastoAnteriores += playlist[i].duracao;
-                
-                let segundosQueJaRodaram = tempoInicioVideo - tempoGastoAnteriores;
-                
-                if (segundosQueJaRodaram > 0) {
-                    novoElemento.currentTime = segundosQueJaRodaram;
-                }
             }
 
             novoElemento.className = 'media-item';
             container.appendChild(novoElemento);
 
+            // Força o navegador a reconhecer a opacidade 0 antes de aplicar a classe active
             novoElemento.offsetWidth; 
 
+            // Dá o play no fade-in
             novoElemento.classList.add('active');
 
+            // Fade-out nas mídias antigas e remoção após 1 segundo
             const elementosAntigos = container.querySelectorAll('.media-item:not(:last-child)');
             elementosAntigos.forEach(el => {
                 el.classList.remove('active'); 
