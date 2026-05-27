@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Corporativa</title>
+    <style>
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: #000; 
+            overflow: hidden; 
+            font-family: sans-serif; 
+        }
+        
+        #start-screen { 
+            display: flex; 
+            width: 100vw; 
+            height: 100vh; 
+            justify-content: center; 
+            align-items: center; 
+            background-color: #121212; 
+            z-index: 100;
+            position: absolute;
+        }
+        
+        button { 
+            padding: 20px 40px; 
+            font-size: 24px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: background 0.3s; 
+        }
+        
+        button:hover { background-color: #218838; }
+        
+        #tv-display { 
+            display: none; 
+            width: 100vw; 
+            height: 100vh; 
+            position: relative; 
+        }
+
+        #media-container {
+            width: 100%; 
+            height: 100%; 
+            position: relative;
+        }
+
+        /* Transição Suave (Crossfade) */
+        .media-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            opacity: 0;
+            transition: opacity 1s ease-in-out; 
+        }
+
+        .media-item.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <button onclick="iniciarTV()">▶ Iniciar TV Corporativa</button>
+    </div>
+
+    <div id="tv-display">
+        <div id="media-container"></div>
+    </div>
+
+    <script>
+        // =========================================================
+        // ⚙️ SUA PLAYLIST
+        // =========================================================
+        const playlist = [
+            { 
+                tipo: 'image',
+                url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Aviso+Sala+Reuni%C3%A3o.png', 
+                duracao: 15 
+            },
+            { 
+                tipo: 'video', 
+                url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/RH+-+V%C3%ADdeo++(2).mp4', 
+                duracao: 175 
+            }
+        ];
+
+        let indexAtual = -1; 
+        const tempoTotalLoop = playlist.reduce((soma, item) => soma + item.duracao, 0);
+
+        function iniciarTV() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('tv-display').style.display = 'block';
+
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            }
+
+            setInterval(motorDeSincronizacao, 250); 
+        }
+
+        function motorDeSincronizacao() {
+            const agoraEmSegundos = Math.floor(Date.now() / 1000);
+            const posicaoNoLoop = agoraEmSegundos % tempoTotalLoop;
+
+            let tempoAcumulado = 0;
+            let indiceEsperado = 0;
+
+            for (let i = 0; i < playlist.length; i++) {
+                tempoAcumulado += playlist[i].duracao;
+                if (posicaoNoLoop < tempoAcumulado) {
+                    indiceEsperado = i;
+                    break;
+                }
+            }
+
+            if (indiceEsperado !== indexAtual) {
+                indexAtual = indiceEsperado;
+                renderizarMedia(indexAtual);
+            }
+        }
+
+        function renderizarMedia(index) {
+            const container = document.getElementById('media-container');
+            const media = playlist[index];
+            
+            let novoElemento;
+
+            if (media.tipo === 'image') {
+                novoElemento = document.createElement('img');
+                novoElemento.src = media.url;
+            } else if (media.tipo === 'video') {
+                novoElemento = document.createElement('video');
+                novoElemento.src = media.url;
+                novoElemento.autoplay = true;
+                novoElemento.muted = true; 
+                novoElemento.loop = true;
+                
+                const agoraEmSegundos = Math.floor(Date.now() / 1000);
+                let tempoInicioVideo = (agoraEmSegundos % tempoTotalLoop);
+                let tempoGastoAnteriores = 0;
+                for(let i=0; i < index; i++) tempoGastoAnteriores += playlist[i].duracao;
+                
+                let segundosQueJaRodaram = tempoInicioVideo - tempoGastoAnteriores;
+                
+                if (segundosQueJaRodaram > 0) {
+                    novoElemento.currentTime = segundosQueJaRodaram;
+                }
+            }
+
+            novoElemento.className = 'media-item';
+            container.appendChild(novoElemento);
+
+            novoElemento.offsetWidth; 
+
+            novoElemento.classList.add('active');
+
+            const elementosAntigos = container.querySelectorAll('.media-item:not(:last-child)');
+            elementosAntigos.forEach(el => {
+                el.classList.remove('active'); 
+                
+                setTimeout(() => {
+                    el.remove();
+                }, 1000);
+            });
+        }
+    </script>
+</body>
+</html>
