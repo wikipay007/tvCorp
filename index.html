@@ -62,7 +62,7 @@
             height: 100%;
             object-fit: contain;
             opacity: 0;
-            transition: opacity 1s ease-in-out; 
+            transition: opacity 2s ease-in-out; 
         }
 
         .media-item.active {
@@ -82,25 +82,30 @@
 
     <script>
         // =========================================================
-        // ⚙️ SUA PLAYLIST
+        // ⚙️ SUA PLAYLIST COM AGENDAMENTO (PADRÃO BRASILEIRO)
+        // Formato: 'DD/MM/AAAA HH:MM:SS' 
         // =========================================================
         const playlist = [
             { 
                 tipo: 'image',
                 url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Aviso+Sala+Reuni%C3%A3o.png', 
-                duracao: 15 
+                duracao: 15,
+                // Exemplo prático de formatação BR
+                dataInicio: '20/05/2026 08:00:00', 
+                dataFim: '30/07/2026 18:30:00'
             },
             { 
                 tipo: 'video', 
                 url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/RH+-+V%C3%ADdeo++(2).mp4', 
                 duracao: 175 
+                // Sem data = Roda sempre
             }
         ];
 
-        let indexAtual = 0; 
+        let indexAtual = -1; 
         let timerLoop;
+        let timerFadeOut;
 
-        // Inicia a TV
         function iniciarTV() {
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('tv-display').style.display = 'block';
@@ -112,21 +117,84 @@
             tocarProximo(); 
         }
 
-        // Lógica sequencial simples
-        function tocarProximo() {
-            renderizarMedia(indexAtual);
-
-            const mediaAtual = playlist[indexAtual];
-
-            // Define o timer para pular para a próxima mídia
-            clearTimeout(timerLoop);
-            timerLoop = setTimeout(() => {
-                indexAtual = (indexAtual + 1) % playlist.length; // Volta para o início se acabar
-                tocarProximo();
-            }, mediaAtual.duracao * 1000); // Converte segundos em milissegundos
+        // Função que traduz a data BR "DD/MM/AAAA HH:MM:SS" para o sistema entender
+        function converterDataBR(dataStr) {
+            if (!dataStr) return null;
+            
+            const partes = dataStr.split(' ');
+            const dataPartes = partes[0].split('/');
+            const horaPartes = partes[1] ? partes[1].split(':') : ['00', '00', '00'];
+            
+            const dia = parseInt(dataPartes[0], 10);
+            const mes = parseInt(dataPartes[1], 10) - 1; // Mês no Javascript começa no zero
+            const ano = parseInt(dataPartes[2], 10);
+            
+            const hora = parseInt(horaPartes[0], 10);
+            const minuto = parseInt(horaPartes[1], 10);
+            const segundo = horaPartes[2] ? parseInt(horaPartes[2], 10) : 0;
+            
+            return new Date(ano, mes, dia, hora, minuto, segundo);
         }
 
-        // Função que cria o elemento na tela e faz a transição
+        function obterProximoIndiceValido(atual) {
+            const agora = new Date();
+            
+            for (let i = 1; i <= playlist.length; i++) {
+                let indexVerificado = (atual + i) % playlist.length;
+                let media = playlist[indexVerificado];
+                let valido = true;
+
+                if (media.dataInicio) {
+                    const limiteInicio = converterDataBR(media.dataInicio);
+                    if (limiteInicio > agora) valido = false; 
+                }
+                
+                if (media.dataFim) {
+                    const limiteFim = converterDataBR(media.dataFim);
+                    if (limiteFim < agora) valido = false; 
+                }
+
+                if (valido) {
+                    return indexVerificado;
+                }
+            }
+            return -1; 
+        }
+
+        function tocarProximo() {
+            const proximoIndex = obterProximoIndiceValido(indexAtual);
+
+            if (proximoIndex === -1) {
+                const container = document.getElementById('media-container');
+                const elementosAntigos = container.querySelectorAll('.media-item');
+                elementosAntigos.forEach(el => el.classList.remove('active'));
+                
+                clearTimeout(timerLoop);
+                timerLoop = setTimeout(tocarProximo, 5000);
+                return;
+            }
+
+            indexAtual = proximoIndex;
+            const mediaAtual = playlist[indexAtual];
+            const elementoAtual = renderizarMedia(indexAtual);
+
+            clearTimeout(timerLoop);
+            timerLoop = setTimeout(() => {
+                tocarProximo();
+            }, mediaAtual.duracao * 1000);
+
+            clearTimeout(timerFadeOut);
+            const tempoParaFadeOut = (mediaAtual.duracao - 3) * 1000;
+            
+            if (tempoParaFadeOut > 0) {
+                timerFadeOut = setTimeout(() => {
+                    if (elementoAtual) {
+                        elementoAtual.classList.remove('active');
+                    }
+                }, tempoParaFadeOut);
+            }
+        }
+
         function renderizarMedia(index) {
             const container = document.getElementById('media-container');
             const media = playlist[index];
@@ -147,21 +215,18 @@
             novoElemento.className = 'media-item';
             container.appendChild(novoElemento);
 
-            // Força o navegador a reconhecer a opacidade 0 antes de aplicar a classe active
             novoElemento.offsetWidth; 
 
-            // Dá o play no fade-in
             novoElemento.classList.add('active');
 
-            // Fade-out nas mídias antigas e remoção após 1 segundo
             const elementosAntigos = container.querySelectorAll('.media-item:not(:last-child)');
             elementosAntigos.forEach(el => {
-                el.classList.remove('active'); 
-                
                 setTimeout(() => {
                     el.remove();
-                }, 1000);
+                }, 2000);
             });
+
+            return novoElemento;
         }
     </script>
 </body>
