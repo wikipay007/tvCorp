@@ -403,6 +403,17 @@
                 if (sessionStorage.getItem('tv-auto')) auto = true;
             } catch (e) {}
             if (auto) iniciarTV();
+            
+            // ============================================================
+            // 📺 CONSOLE LOG DA PLAYLIST COMPLETA
+            // ============================================================
+            console.log('📺 ===== PLAYLIST CARREGADA =====');
+            console.log('Total de itens:', playlist.length);
+            console.log('Playlist completa:');
+            console.table(playlist);
+            console.log('JSON formatado:');
+            console.log(JSON.stringify(playlist, null, 2));
+            console.log('================================');
         })();
     </script>
 </body>
