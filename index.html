@@ -69,6 +69,28 @@
 
         .media-item.active { opacity: 1; }
 
+        /* Botão de pular: quase transparente, aparece ao passar o mouse/foco */
+        #btn-pular {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            z-index: 50;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            font-size: 16px;
+            color: #fff;
+            background: rgba(255, 255, 255, .15);
+            border: 2px solid transparent;
+            border-radius: 50%;
+            opacity: .08;
+            cursor: pointer;
+            transition: opacity .3s;
+        }
+        #btn-pular:hover,
+        #btn-pular:focus-visible { opacity: .7; outline: none; }
+        #btn-pular:focus-visible { border-color: #fff; }
+
         @media (prefers-reduced-motion: reduce) {
             .media-item { transition: none; }
         }
@@ -82,6 +104,7 @@
 
     <div id="tv-display">
         <div id="media-container"></div>
+        <button id="btn-pular" title="Próximo" aria-label="Próximo item">▶▶</button>
     </div>
 
     <script>
@@ -327,6 +350,11 @@
             }
         }
 
+        // ---------- Pular para o próximo item ----------
+        function pular() {
+            if (iniciada) tocarProximo();
+        }
+
         // ---------- Playlist remota (opcional) ----------
         async function atualizarPlaylist() {
             if (!CONFIG.playlistUrl) return;
@@ -396,10 +424,19 @@
         }
 
         document.getElementById('btn-iniciar').addEventListener('click', iniciarTV);
+        document.getElementById('btn-pular').addEventListener('click', pular);
 
-        // Enter/OK do controle remoto também inicia
         document.addEventListener('keydown', e => {
-            if (!iniciada && (e.key === 'Enter' || e.key === ' ')) iniciarTV();
+            if (!iniciada) {
+                // Enter/OK do controle remoto inicia
+                if (e.key === 'Enter' || e.key === ' ') iniciarTV();
+                return;
+            }
+            // Seta → ou botão de avançar do controle pulam para o próximo
+            if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext' ||
+                e.key === 'MediaFastForward' || e.keyCode === 417) {
+                pular();
+            }
         });
 
         // Modo quiosque: abra com ?auto=1 para iniciar sem clicar (o vídeo é mudo, então o navegador permite)
