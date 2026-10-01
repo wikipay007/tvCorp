@@ -7,7 +7,7 @@ const CONFIG = {
     transicaoMs: 1500,
     duracaoPadraoImagemSeg: 10,
     timeoutCarregamentoMs: 20000,
-    reiniciarPaginaAs: '04:00',   // recarrega 1x por dia. null = desligado
+    reiniciarPaginaAs: null,   // manter a tela ligada sem reinício automático
 
     // Clima (Open-Meteo, gratuito e sem chave)
     cidade: 'Vargem Grande Paulista',
@@ -424,7 +424,7 @@ function iniciarTV() {
     if (raiz.requestFullscreen && !document.fullscreenElement) raiz.requestFullscreen().catch(() => {});
 
     manterTelaLigada();
-    agendarReinicioDiario();
+    // sem agendamento de reinício: a TV deve permanecer ligada sempre
     iniciarRolagem();
 
     if (CONFIG.playlistUrl) setInterval(atualizarPlaylist, CONFIG.atualizarPlaylistMin * 60 * 1000);
