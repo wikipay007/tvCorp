@@ -47,6 +47,13 @@ const PLAYLIST_PADRAO = [
         duracao: 40,
         dataInicio: '29/09/2026 15:10:00',
         dataFim: '09/10/2026 18:15:00'
+    },
+    {
+        tipo: 'video',
+        url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Novos+Brigadistas+(1).mp4',
+        duracao: 20,
+        dataInicio: '29/09/2026 15:10:00',
+        dataFim: '09/10/2026 18:15:00'
     }
 ];
 
