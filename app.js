@@ -360,14 +360,16 @@ async function carregarAniversariantes() {
 let rolagem = null;
 function iniciarRolagem() {
     const el = $('lista-aniv');
-    let pausa = 0, dir = 1;
+    let pausa = 120; // 6s iniciais parados antes da rolagem começar
+    let dir = 1;
     clearInterval(rolagem);
     rolagem = setInterval(() => {
         if (el.scrollHeight <= el.clientHeight + 2) return;
         if (pausa > 0) { pausa--; return; }
         el.scrollTop += dir;
         if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1 || el.scrollTop <= 0) {
-            dir = -dir; pausa = 60;
+            dir = -dir;
+            pausa = 60; // pausa no fim/início da lista
         }
     }, 50);
 }
