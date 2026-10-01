@@ -1,464 +1,625 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TV Corporativa</title>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            overflow: hidden;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV Corporativa</title>
+<style>
+    :root {
+        --bg: #070d16; --card: #0f1923; --borda: #1b2a38;
+        --texto: #f2f6fa; --suave: #8fa3b5; --acento: #14d9c4;
+        --transicao: 1500ms;
+    }
+    html, body {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        background: var(--bg); color: var(--texto); overflow: hidden;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    html { font-size: clamp(10px, .8334vw, 40px); } /* 16px em 1920px: tudo escala com a tela */
 
-        #start-screen {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #121212;
-            z-index: 100;
-        }
+    #start-screen {
+        position: absolute; inset: 0; z-index: 100;
+        display: flex; justify-content: center; align-items: center; background: #121212;
+    }
+    #start-screen button {
+        padding: 1.25rem 2.5rem; font-size: 1.5rem; font-weight: bold; color: #fff;
+        background: #28a745; border: 4px solid transparent; border-radius: 8px;
+        cursor: pointer; transition: background .3s;
+    }
+    #start-screen button:hover { background: #218838; }
+    #start-screen button:focus-visible { outline: none; border-color: #fff; }
 
-        #start-screen button {
-            padding: 20px 40px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #fff;
-            background: #28a745;
-            border: 4px solid transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background .3s;
-        }
+    /* ---------- Layout principal ---------- */
+    #tv-display {
+        display: none; box-sizing: border-box; width: 100vw; height: 100vh;
+        padding: .8rem; gap: .8rem;
+        grid-template-columns: 1fr 26rem;
+        /*cursor: none; 8*/
+    }
+    #tv-display.on { display: grid; }
 
-        /* Foco visível para navegar com o controle remoto (D-pad) */
-        #start-screen button:hover { background: #218838; }
-        #start-screen button:focus-visible { outline: none; border-color: #fff; }
+    .painel {
+        background: var(--card); border: 1px solid var(--borda);
+        border-radius: 1.2rem; box-sizing: border-box; min-height: 0; min-width: 0;
+    }
 
-        #tv-display {
-            display: none;
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            /*cursor: none; 8*/
-        }
+    /* ---------- Mídia ---------- */
+    #palco { position: relative; overflow: hidden; }
+    #media-container { position: absolute; inset: 0; }
+    .media-item {
+        position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+        opacity: 0; transition: opacity var(--transicao) ease-in-out; will-change: opacity;
+    }
+    .media-item.active { opacity: 1; }
 
-        #media-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            background: #000;
-        }
+    #vazio {
+        position: absolute; inset: 0; display: none; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+    }
+    #vazio.on { display: flex; }
+    #vazio h1 { margin: 0 0 .4rem; font-size: 2.6rem; }
+    #vazio p { margin: 0; color: var(--suave); font-size: 1.1rem; }
 
-        .media-item {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            opacity: 0;
-            transition: opacity var(--transicao, 1500ms) ease-in-out;
-            will-change: opacity;
-        }
+    /* Botão de pular: quase transparente */
+    #btn-pular {
+        position: absolute; right: 1rem; bottom: 1rem; z-index: 50;
+        width: 2.5rem; height: 2.5rem; padding: 0; font-size: 1rem; color: #fff;
+        background: rgba(255,255,255,.15); border: 2px solid transparent; border-radius: 50%;
+        opacity: .08; cursor: pointer; transition: opacity .3s;
+    }
+    #btn-pular:hover, #btn-pular:focus-visible { opacity: .7; outline: none; }
+    #btn-pular:focus-visible { border-color: #fff; }
 
-        .media-item.active { opacity: 1; }
+    /* ---------- Barra lateral ---------- */
+    #lateral { display: flex; flex-direction: column; gap: .8rem; min-height: 0; }
+    #lateral .painel { padding: 1.3rem 1.4rem; }
 
-        /* Botão de pular: quase transparente, aparece ao passar o mouse/foco */
-        #btn-pular {
-            position: absolute;
-            right: 16px;
-            bottom: 16px;
-            z-index: 50;
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            font-size: 16px;
-            color: #fff;
-            background: rgba(255, 255, 255, .15);
-            border: 2px solid transparent;
-            border-radius: 50%;
-            opacity: .08;
-            cursor: pointer;
-            transition: opacity .3s;
-        }
-        #btn-pular:hover,
-        #btn-pular:focus-visible { opacity: .7; outline: none; }
-        #btn-pular:focus-visible { border-color: #fff; }
+    #relogio { font-size: 4.6rem; font-weight: 800; line-height: 1; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+    #data { margin-top: .7rem; font-size: 1.15rem; color: var(--suave); }
 
-        @media (prefers-reduced-motion: reduce) {
-            .media-item { transition: none; }
-        }
-    </style>
+    .rotulo {
+        display: flex; align-items: center; justify-content: space-between;
+        font-size: .95rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--acento);
+    }
+    .rotulo > span { display: flex; align-items: center; gap: .5rem; }
+
+    #clima-corpo { display: flex; justify-content: space-between; align-items: flex-end; margin-top: .9rem; }
+    #clima-temp { font-size: 4.6rem; font-weight: 800; line-height: 1; }
+    #clima-desc { margin-top: .5rem; font-size: 1.15rem; }
+    #clima-extra { text-align: right; font-size: .95rem; color: var(--suave); line-height: 1.6; }
+
+    #aniv {
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        background: linear-gradient(160deg, #0f1f2b 0%, #0f1923 60%);
+    }
+    #btn-csv {
+        background: none; border: 0; color: var(--acento); font-size: 1rem;
+        opacity: .15; cursor: pointer; padding: .2rem .4rem;
+    }
+    #btn-csv:hover, #btn-csv:focus-visible { opacity: 1; outline: none; }
+    #lista-aniv { flex: 1; min-height: 0; overflow: hidden; margin-top: 1rem; }
+    .vazio-aniv { color: var(--suave); font-size: 1.05rem; }
+
+    .aniv-item {
+        display: flex; align-items: center; gap: .9rem; padding: .55rem .6rem;
+        margin-bottom: .45rem; border-radius: .8rem; border: 1px solid transparent;
+    }
+    .aniv-item.passou { opacity: .5; }
+    .aniv-item.hoje { background: rgba(20,217,196,.12); border-color: var(--acento); }
+    .aniv-dia {
+        flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: #17303a; color: var(--acento); font-weight: 800; font-size: 1.1rem;
+    }
+    .aniv-item.hoje .aniv-dia { background: var(--acento); color: #04211e; }
+    .aniv-nome { font-size: 1.1rem; font-weight: 600; }
+    .aniv-setor { font-size: .85rem; color: var(--suave); margin-top: .1rem; }
+
+    @media (prefers-reduced-motion: reduce) { .media-item { transition: none; } }
+</style>
 </head>
 <body>
 
-    <div id="start-screen">
-        <button id="btn-iniciar" autofocus>▶ Iniciar TV Corporativa</button>
-    </div>
+<div id="start-screen">
+    <button id="btn-iniciar" autofocus>▶ Iniciar TV Corporativa</button>
+</div>
 
-    <div id="tv-display">
+<div id="tv-display">
+    <div id="palco" class="painel">
         <div id="media-container"></div>
+        <div id="vazio" class="on">
+            <h1>TV Corporativa</h1>
+            <p>Nenhuma playlist ativa no momento.</p>
+        </div>
         <button id="btn-pular" title="Próximo" aria-label="Próximo item">▶▶</button>
     </div>
 
-    <script>
-        // =========================================================
-        // ⚙️ CONFIGURAÇÕES
-        // =========================================================
-        const CONFIG = {
-            // Opcional: se existir, a playlist é lida deste arquivo/endpoint (JSON)
-            // e atualizada sozinha, sem precisar mexer na TV. Use null para desligar.
-            playlistUrl: null,            // ex.: 'playlist.json' ou '/api/playlist'
-            atualizarPlaylistMin: 5,      // de quantos em quantos minutos buscar a playlist
-            transicaoMs: 1500,            // duração do crossfade
-            duracaoPadraoImagemSeg: 10,   // usado quando a imagem não tem "duracao"
-            timeoutCarregamentoMs: 20000, // tempo máximo esperando uma mídia carregar
-            reiniciarPaginaAs: '04:00'    // recarrega 1x por dia (evita acúmulo de memória). null = desligado
-        };
+    <div id="lateral">
+        <div class="painel">
+            <div id="relogio">--:--</div>
+            <div id="data"></div>
+        </div>
 
-        // =========================================================
-        // 🎬 PLAYLIST
-        // tipo:       'image' | 'video'
-        // url:        endereço da mídia
-        // duracao:    segundos. Imagem: tempo na tela. Vídeo: opcional
-        //             (sem "duracao" o vídeo toca até o fim; com "duracao"
-        //             ele é cortado ou repetido até completar o tempo)
-        // ajuste:     opcional, 'contain' (padrão, sem cortes) ou 'cover' (preenche a tela)
-        // dataInicio / dataFim: opcionais, formato 'DD/MM/AAAA HH:MM:SS'
-        //             (a hora pode ser omitida). Sem data = roda sempre.
-        //
-        // Exemplo com agendamento:
-        // {
-        //     tipo: 'image',
-        //     url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Aviso+Sala+Reuni%C3%A3o.png',
-        //     duracao: 15,
-        //     dataInicio: '20/05/2026 08:00:00',
-        //     dataFim: '30/07/2026 18:30:00'
-        // }
-        // =========================================================
-        const PLAYLIST_PADRAO = [
-             {
-                tipo: 'image',
-                url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Aviso+Sala+Reuni%C3%A3o.png'
-            },
-             {
-                tipo: 'video',
-                url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/RH+-+V%C3%ADdeo+.mp4'
-            },
-            {
-             tipo: 'video',
-             url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Outubro+Rosa.mp4',
-             duracao: 26,
-             dataInicio: '29/09/2026 15:10:00',
-             dataFim: '09/10/2026 18:15:00'
-            },
-            {
-             tipo: 'video',
-             url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Plant%C3%A3o+de+D%C3%BAvidas.mp4',
-             duracao: 40,
-             dataInicio: '29/09/2026 15:10:00',
-             dataFim: '09/10/2026 18:15:00'
-            }
-        ];
+        <div class="painel">
+            <div class="rotulo"><span><span id="clima-icone">⛅</span><span id="clima-titulo"></span></span></div>
+            <div id="clima-corpo">
+                <div>
+                    <div id="clima-temp">--°</div>
+                    <div id="clima-desc">Carregando…</div>
+                </div>
+                <div id="clima-extra"></div>
+            </div>
+        </div>
 
-        // =========================================================
-        // 🔧 LÓGICA
-        // =========================================================
-        const container = document.getElementById('media-container');
-        const RECHECAGEM_UNICA_MS = 30000; // com 1 só item válido, reavalia o agendamento a cada 30s
+        <div id="aniv" class="painel">
+            <div class="rotulo">
+                <span><span>🎂</span><span id="aniv-titulo">Aniversariantes</span></span>
+                <button id="btn-csv" title="Enviar CSV de aniversariantes (tecla U)">⬆</button>
+            </div>
+            <div id="lista-aniv"></div>
+        </div>
+    </div>
+</div>
 
-        let playlist = PLAYLIST_PADRAO;
-        let indexAtual = -1;
-        let elementoAtual = null;
-        let timer = null;
-        let geracao = 0;      // invalida operações assíncronas antigas
-        let wakeLock = null;
-        let iniciada = false;
+<input type="file" id="arquivo-csv" accept=".csv,.txt,text/csv" style="display:none">
 
-        document.documentElement.style.setProperty('--transicao', CONFIG.transicaoMs + 'ms');
+<script>
+// =========================================================
+// ⚙️ CONFIGURAÇÕES
+// =========================================================
+const CONFIG = {
+    playlistUrl: null,            // ex.: 'playlist.json' (JSON). null = usa PLAYLIST_PADRAO
+    atualizarPlaylistMin: 5,
+    transicaoMs: 1500,
+    duracaoPadraoImagemSeg: 10,
+    timeoutCarregamentoMs: 20000,
+    reiniciarPaginaAs: '04:00',   // recarrega 1x por dia. null = desligado
 
-        // ---------- Datas (padrão BR) ----------
-        function converterDataBR(str) {
-            if (!str) return null;
-            const m = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(String(str).trim());
-            if (!m) {
-                console.warn('Data inválida (use DD/MM/AAAA HH:MM:SS):', str);
-                return null;
-            }
-            const [, dia, mes, ano, h = 0, min = 0, seg = 0] = m;
-            return new Date(+ano, +mes - 1, +dia, +h, +min, +seg);
+    // Clima (Open-Meteo, gratuito e sem chave)
+    cidade: 'Vargem Grande Paulista',
+    latitude: -23.5997,
+    longitude: -47.0233,
+    atualizarClimaMin: 15,
+
+    // Aniversariantes: CSV em uma URL (ex.: S3). null = usa só o CSV enviado pelo botão ⬆ / tecla U
+    aniversariantesUrl: null,     // ex.: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/aniversariantes.csv'
+    atualizarAnivMin: 30
+};
+
+// =========================================================
+// 🎬 PLAYLIST
+// tipo: 'image' | 'video' | url | duracao (seg) | ajuste: 'contain' (padrão) ou 'cover'
+// dataInicio / dataFim (opcionais): 'DD/MM/AAAA HH:MM:SS'
+// =========================================================
+const PLAYLIST_PADRAO = [
+    {
+        tipo: 'image',
+        url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Aviso+Sala+Reuni%C3%A3o.png'
+    },
+    {
+        tipo: 'video',
+        url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/RH+-+V%C3%ADdeo+.mp4'
+    },
+    {
+        tipo: 'video',
+        url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Outubro+Rosa.mp4',
+        duracao: 30,
+        dataInicio: '29/09/2026 15:10:00',
+        dataFim: '09/10/2026 18:15:00'
+    },
+    {
+        tipo: 'video',
+        url: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/Plant%C3%A3o+de+D%C3%BAvidas.mp4',
+        duracao: 40,
+        dataInicio: '29/09/2026 15:10:00',
+        dataFim: '09/10/2026 18:15:00'
+    }
+];
+
+// =========================================================
+// 🔧 LÓGICA DA PLAYLIST
+// =========================================================
+const $ = id => document.getElementById(id);
+const container = $('media-container');
+const RECHECAGEM_UNICA_MS = 30000;
+
+let playlist = PLAYLIST_PADRAO;
+let indexAtual = -1, elementoAtual = null, timer = null, geracao = 0;
+let wakeLock = null, iniciada = false;
+
+document.documentElement.style.setProperty('--transicao', CONFIG.transicaoMs + 'ms');
+
+function converterDataBR(str) {
+    if (!str) return null;
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(String(str).trim());
+    if (!m) { console.warn('Data inválida (use DD/MM/AAAA HH:MM:SS):', str); return null; }
+    const [, dia, mes, ano, h = 0, min = 0, seg = 0] = m;
+    return new Date(+ano, +mes - 1, +dia, +h, +min, +seg);
+}
+
+function estaNoPeriodo(media, agora) {
+    const inicio = converterDataBR(media.dataInicio), fim = converterDataBR(media.dataFim);
+    if (inicio && inicio > agora) return false;
+    if (fim && fim < agora) return false;
+    return true;
+}
+
+function itemValido(m) {
+    return m && (m.tipo === 'image' || m.tipo === 'video') && typeof m.url === 'string';
+}
+
+function listarValidos() {
+    const agora = new Date(), validos = [];
+    playlist.forEach((m, i) => { if (itemValido(m) && estaNoPeriodo(m, agora)) validos.push(i); });
+    return validos;
+}
+
+function proximoIndice(atual, validos) {
+    if (!validos.length) return -1;
+    const seguinte = validos.find(i => i > atual);
+    return seguinte !== undefined ? seguinte : validos[0];
+}
+
+function carregarMedia(media) {
+    return new Promise((resolve, reject) => {
+        const el = document.createElement(media.tipo === 'video' ? 'video' : 'img');
+        el.className = 'media-item';
+        if (media.ajuste === 'cover') el.style.objectFit = 'cover';
+
+        const t = setTimeout(() => reject(new Error('Tempo esgotado: ' + media.url)), CONFIG.timeoutCarregamentoMs);
+        const ok = () => { clearTimeout(t); resolve(el); };
+        el.onerror = () => { clearTimeout(t); reject(new Error('Falha ao carregar: ' + media.url)); };
+
+        if (media.tipo === 'video') {
+            el.muted = true; el.playsInline = true; el.preload = 'auto';
+            el.onloadeddata = ok;
+        } else {
+            el.decoding = 'async'; el.alt = ''; el.onload = ok;
         }
+        el.src = media.url;
+    });
+}
 
-        function estaNoPeriodo(media, agora) {
-            const inicio = converterDataBR(media.dataInicio);
-            const fim = converterDataBR(media.dataFim);
-            if (inicio && inicio > agora) return false;
-            if (fim && fim < agora) return false;
-            return true;
+function descartar(el) {
+    if (!el) return;
+    if (el.tagName === 'VIDEO') { el.pause(); el.removeAttribute('src'); el.load(); } // libera buffer
+    el.remove();
+}
+
+function limparTela() {
+    const antigo = elementoAtual;
+    elementoAtual = null;
+    $('vazio').classList.add('on');
+    if (antigo) {
+        antigo.classList.remove('active');
+        setTimeout(() => descartar(antigo), CONFIG.transicaoMs + 100);
+    }
+}
+
+function exibir(el) {
+    const antigo = elementoAtual;
+    elementoAtual = el;
+    $('vazio').classList.remove('on');
+    container.appendChild(el);
+    void el.offsetWidth; // força reflow para a transição disparar
+
+    if (el.tagName === 'VIDEO') el.play().catch(err => console.warn('Não foi possível reproduzir o vídeo:', err));
+    el.classList.add('active');
+
+    if (antigo) {
+        antigo.classList.remove('active');
+        setTimeout(() => descartar(antigo), CONFIG.transicaoMs + 100);
+    }
+}
+
+async function tocarProximo() {
+    clearTimeout(timer);
+    const minhaGeracao = ++geracao;
+    const validos = listarValidos();
+    const idx = proximoIndice(indexAtual, validos);
+
+    if (idx === -1) { // nada agendado: mostra a mensagem e tenta de novo em 5s
+        limparTela();
+        indexAtual = -1;
+        timer = setTimeout(tocarProximo, 5000);
+        return;
+    }
+
+    if (validos.length === 1 && idx === indexAtual && elementoAtual) {
+        timer = setTimeout(tocarProximo, RECHECAGEM_UNICA_MS);
+        return;
+    }
+
+    const media = playlist[idx];
+    let el;
+    try {
+        el = await carregarMedia(media);
+    } catch (err) {
+        console.error(err);
+        if (minhaGeracao !== geracao) return;
+        indexAtual = idx; // pula o item com problema
+        timer = setTimeout(tocarProximo, 3000);
+        return;
+    }
+    if (minhaGeracao !== geracao) { descartar(el); return; }
+
+    indexAtual = idx;
+    exibir(el);
+    agendarTroca(media, el, validos.length === 1);
+}
+
+function agendarTroca(media, el, itemUnico) {
+    const duracaoMs = media.duracao > 0 ? media.duracao * 1000 : null;
+
+    if (itemUnico) {
+        if (media.tipo === 'video') el.loop = true;
+        timer = setTimeout(tocarProximo, RECHECAGEM_UNICA_MS);
+        return;
+    }
+    if (media.tipo === 'video') {
+        if (duracaoMs) {
+            el.loop = true;
+            timer = setTimeout(tocarProximo, duracaoMs);
+        } else {
+            el.onended = tocarProximo;
+            const limite = (isFinite(el.duration) ? el.duration : 300) * 1000 + 15000;
+            timer = setTimeout(tocarProximo, limite); // rede de segurança
         }
+    } else {
+        timer = setTimeout(tocarProximo, duracaoMs || CONFIG.duracaoPadraoImagemSeg * 1000);
+    }
+}
 
-        function itemValido(media) {
-            return media && (media.tipo === 'image' || media.tipo === 'video') && typeof media.url === 'string';
-        }
+function pular() { if (iniciada) tocarProximo(); }
 
-        function listarValidos() {
-            const agora = new Date();
-            const validos = [];
-            playlist.forEach((media, i) => {
-                if (itemValido(media) && estaNoPeriodo(media, agora)) validos.push(i);
-            });
-            return validos;
-        }
-
-        function proximoIndice(atual, validos) {
-            if (!validos.length) return -1;
-            const seguinte = validos.find(i => i > atual);
-            return seguinte !== undefined ? seguinte : validos[0];
-        }
-
-        // ---------- Carregamento e exibição ----------
-        function carregarMedia(media) {
-            return new Promise((resolve, reject) => {
-                const el = document.createElement(media.tipo === 'video' ? 'video' : 'img');
-                el.className = 'media-item';
-                if (media.ajuste === 'cover') el.style.objectFit = 'cover';
-
-                const t = setTimeout(() => reject(new Error('Tempo esgotado: ' + media.url)), CONFIG.timeoutCarregamentoMs);
-                const ok = () => { clearTimeout(t); resolve(el); };
-                const erro = () => { clearTimeout(t); reject(new Error('Falha ao carregar: ' + media.url)); };
-
-                el.onerror = erro;
-
-                if (media.tipo === 'video') {
-                    el.muted = true;
-                    el.playsInline = true;
-                    el.preload = 'auto';
-                    el.onloadeddata = ok;
-                } else {
-                    el.decoding = 'async';
-                    el.alt = '';
-                    el.onload = ok;
-                }
-                el.src = media.url;
-            });
-        }
-
-        function descartar(el) {
-            if (!el) return;
-            if (el.tagName === 'VIDEO') {
-                el.pause();
-                el.removeAttribute('src');
-                el.load(); // libera o buffer de vídeo (importante em TV/Fire Stick)
-            }
-            el.remove();
-        }
-
-        function limparTela() {
-            const antigo = elementoAtual;
-            elementoAtual = null;
-            if (antigo) {
-                antigo.classList.remove('active');
-                setTimeout(() => descartar(antigo), CONFIG.transicaoMs + 100);
-            }
-        }
-
-        function exibir(el) {
-            const antigo = elementoAtual;
-            elementoAtual = el;
-            container.appendChild(el);
-            void el.offsetWidth; // força reflow para a transição disparar
-
-            if (el.tagName === 'VIDEO') {
-                el.play().catch(err => console.warn('Não foi possível reproduzir o vídeo:', err));
-            }
-            el.classList.add('active');
-
-            if (antigo) {
-                antigo.classList.remove('active');
-                setTimeout(() => descartar(antigo), CONFIG.transicaoMs + 100);
-            }
-        }
-
-        // ---------- Loop principal ----------
-        async function tocarProximo() {
-            clearTimeout(timer);
-            const minhaGeracao = ++geracao;
-
-            const validos = listarValidos();
-            const idx = proximoIndice(indexAtual, validos);
-
-            // Nada agendado para agora: tela preta e tenta de novo em 5s
-            if (idx === -1) {
-                limparTela();
-                indexAtual = -1;
-                timer = setTimeout(tocarProximo, 5000);
-                return;
-            }
-
-            // Só 1 item válido e já está na tela: não recarrega, só reavalia o agendamento depois
-            if (validos.length === 1 && idx === indexAtual && elementoAtual) {
-                timer = setTimeout(tocarProximo, RECHECAGEM_UNICA_MS);
-                return;
-            }
-
-            const media = playlist[idx];
-            let el;
-            try {
-                el = await carregarMedia(media);
-            } catch (err) {
-                console.error(err);
-                if (minhaGeracao !== geracao) return;
-                indexAtual = idx; // pula o item com problema
-                timer = setTimeout(tocarProximo, 3000);
-                return;
-            }
-            if (minhaGeracao !== geracao) { descartar(el); return; }
-
-            indexAtual = idx;
-            exibir(el);
-            agendarTroca(media, el, validos.length === 1);
-        }
-
-        function agendarTroca(media, el, itemUnico) {
-            const duracaoMs = media.duracao > 0 ? media.duracao * 1000 : null;
-
-            if (itemUnico) {
-                // Único item: fica em loop e só reavalia as datas de tempos em tempos
-                if (media.tipo === 'video') el.loop = true;
-                timer = setTimeout(tocarProximo, RECHECAGEM_UNICA_MS);
-                return;
-            }
-
-            if (media.tipo === 'video') {
-                if (duracaoMs) {
-                    el.loop = true; // repete se o vídeo for mais curto que a duração
-                    timer = setTimeout(tocarProximo, duracaoMs);
-                } else {
-                    el.onended = tocarProximo; // toca até o fim
-                    // Rede de segurança: se o vídeo travar, segue mesmo assim
-                    const limite = (isFinite(el.duration) ? el.duration : 300) * 1000 + 15000;
-                    timer = setTimeout(tocarProximo, limite);
-                }
-            } else {
-                timer = setTimeout(tocarProximo, duracaoMs || CONFIG.duracaoPadraoImagemSeg * 1000);
-            }
-        }
-
-        // ---------- Pular para o próximo item ----------
-        function pular() {
+async function atualizarPlaylist() {
+    if (!CONFIG.playlistUrl) return;
+    try {
+        const resp = await fetch(CONFIG.playlistUrl, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const nova = await resp.json();
+        if (!Array.isArray(nova)) throw new Error('A playlist precisa ser uma lista (array)');
+        if (JSON.stringify(nova) !== JSON.stringify(playlist)) {
+            playlist = nova; indexAtual = -1;
             if (iniciada) tocarProximo();
         }
+    } catch (err) { console.warn('Não foi possível atualizar a playlist, mantendo a atual:', err); }
+}
 
-        // ---------- Playlist remota (opcional) ----------
-        async function atualizarPlaylist() {
-            if (!CONFIG.playlistUrl) return;
-            try {
-                const resp = await fetch(CONFIG.playlistUrl, { cache: 'no-store' });
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const nova = await resp.json();
-                if (!Array.isArray(nova)) throw new Error('A playlist precisa ser uma lista (array)');
-                if (JSON.stringify(nova) !== JSON.stringify(playlist)) {
-                    playlist = nova;
-                    indexAtual = -1;
-                    if (iniciada) tocarProximo();
-                }
-            } catch (err) {
-                console.warn('Não foi possível atualizar a playlist, mantendo a atual:', err);
-            }
-        }
+// =========================================================
+// 🕒 RELÓGIO E DATA
+// =========================================================
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+const pad = n => String(n).padStart(2, '0');
 
-        // ---------- Tela sempre ligada / tela cheia / reinício diário ----------
-        async function manterTelaLigada() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) {
-                console.log('Wake Lock indisponível:', err);
-            }
-        }
+function atualizarRelogio() {
+    const d = new Date();
+    $('relogio').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    const dia = DIAS[d.getDay()];
+    $('data').textContent = dia.charAt(0).toUpperCase() + dia.slice(1) + ', ' + d.getDate() + ' de ' + MESES[d.getMonth()];
+}
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && iniciada) manterTelaLigada();
+// =========================================================
+// 🌦️ CLIMA (Open-Meteo)
+// =========================================================
+function descreverClima(c) {
+    if (c === 0) return ['Céu limpo', '☀️'];
+    if (c <= 2) return ['Parcialmente nublado', '⛅'];
+    if (c === 3) return ['Nublado', '☁️'];
+    if (c === 45 || c === 48) return ['Neblina', '🌫️'];
+    if (c >= 51 && c <= 57) return ['Garoa', '🌦️'];
+    if (c >= 61 && c <= 67) return ['Chuva', '🌧️'];
+    if (c >= 71 && c <= 77) return ['Neve', '❄️'];
+    if (c >= 80 && c <= 82) return ['Pancadas de chuva', '🌧️'];
+    if (c >= 95) return ['Tempestade', '⛈️'];
+    return ['—', '⛅'];
+}
+
+async function atualizarClima() {
+    try {
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + CONFIG.latitude +
+            '&longitude=' + CONFIG.longitude +
+            '&current=temperature_2m,weather_code,wind_speed_10m' +
+            '&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo';
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const j = await resp.json();
+        const [desc, icone] = descreverClima(j.current.weather_code);
+        $('clima-temp').textContent = Math.round(j.current.temperature_2m) + '°';
+        $('clima-desc').textContent = desc;
+        $('clima-icone').textContent = icone;
+        $('clima-extra').innerHTML = 'Máx ' + Math.round(j.daily.temperature_2m_max[0]) + '° · Mín ' +
+            Math.round(j.daily.temperature_2m_min[0]) + '°<br>Vento ' + Math.round(j.current.wind_speed_10m) + ' km/h';
+    } catch (err) { console.warn('Clima indisponível, mantendo o último valor:', err); }
+}
+
+// =========================================================
+// 🎂 ANIVERSARIANTES (CSV)
+// Formato: nome;data;setor   (setor é opcional; separador "," ou ";")
+// Data aceita: DD/MM, DD/MM/AAAA ou AAAA-MM-DD. Linha de cabeçalho é ignorada.
+// =========================================================
+const CHAVE_CSV = 'tv-aniversariantes';
+let aniversariantes = [];
+
+function lerArmazenado() { try { return localStorage.getItem(CHAVE_CSV) || ''; } catch (e) { return ''; } }
+
+function parseCSV(texto) {
+    const linhas = texto.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
+    if (!linhas.length) return [];
+    const sep = (linhas[0].match(/;/g) || []).length >= (linhas[0].match(/,/g) || []).length ? ';' : ',';
+    const lista = [];
+    linhas.forEach(linha => {
+        const cels = linha.split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+        let dia = 0, mes = 0, iData = -1;
+        cels.forEach((c, i) => {
+            if (iData !== -1) return;
+            let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(c);
+            if (m) { dia = +m[3]; mes = +m[2]; iData = i; return; }
+            m = /^(\d{1,2})[\/-](\d{1,2})(?:[\/-]\d{2,4})?$/.exec(c);
+            if (m) { dia = +m[1]; mes = +m[2]; iData = i; }
         });
+        if (iData === -1 || dia < 1 || dia > 31 || mes < 1 || mes > 12) return; // cabeçalho/linha inválida
+        const outros = cels.filter((c, i) => i !== iData && c);
+        if (!outros.length) return;
+        lista.push({ nome: outros[0], setor: outros[1] || '', dia, mes });
+    });
+    return lista;
+}
 
-        function agendarReinicioDiario() {
-            if (!CONFIG.reiniciarPaginaAs) return;
-            const [h, m] = CONFIG.reiniciarPaginaAs.split(':').map(Number);
-            const alvo = new Date();
-            alvo.setHours(h, m, 0, 0);
-            if (alvo <= new Date()) alvo.setDate(alvo.getDate() + 1);
+function renderAniversariantes() {
+    const hoje = new Date(), mes = hoje.getMonth() + 1;
+    $('aniv-titulo').textContent = 'Aniversariantes de ' + MESES[mes - 1];
+    const lista = $('lista-aniv');
+    lista.innerHTML = '';
+    lista.scrollTop = 0;
 
-            setTimeout(() => {
-                try { sessionStorage.setItem('tv-auto', '1'); } catch (e) {}
-                location.reload();
-            }, alvo - new Date());
+    const doMes = aniversariantes.filter(a => a.mes === mes).sort((a, b) => a.dia - b.dia || a.nome.localeCompare(b.nome));
+    if (!doMes.length) {
+        const p = document.createElement('div');
+        p.className = 'vazio-aniv';
+        p.textContent = 'Nenhum aniversariante cadastrado.';
+        lista.appendChild(p);
+        return;
+    }
+    doMes.forEach(a => {
+        const item = document.createElement('div');
+        item.className = 'aniv-item' + (a.dia === hoje.getDate() ? ' hoje' : a.dia < hoje.getDate() ? ' passou' : '');
+        const dia = document.createElement('div'); dia.className = 'aniv-dia'; dia.textContent = pad(a.dia);
+        const info = document.createElement('div');
+        const nome = document.createElement('div'); nome.className = 'aniv-nome';
+        nome.textContent = a.nome + (a.dia === hoje.getDate() ? ' 🎉' : '');
+        info.appendChild(nome);
+        if (a.setor) {
+            const s = document.createElement('div'); s.className = 'aniv-setor'; s.textContent = a.setor;
+            info.appendChild(s);
         }
+        item.appendChild(dia); item.appendChild(info);
+        lista.appendChild(item);
+    });
+}
 
-        // ---------- Início ----------
-        function iniciarTV() {
-            if (iniciada) return;
-            iniciada = true;
+async function carregarAniversariantes() {
+    let texto = '';
+    if (CONFIG.aniversariantesUrl) {
+        try {
+            const resp = await fetch(CONFIG.aniversariantesUrl, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            texto = await resp.text();
+        } catch (err) { console.warn('CSV remoto indisponível, usando o último enviado:', err); }
+    }
+    if (!texto) texto = lerArmazenado();
+    aniversariantes = parseCSV(texto);
+    renderAniversariantes();
+}
 
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('tv-display').style.display = 'block';
-
-            const raiz = document.documentElement;
-            if (raiz.requestFullscreen && !document.fullscreenElement) {
-                raiz.requestFullscreen().catch(() => {}); // pode falhar sem clique; a TV segue funcionando
-            }
-
-            manterTelaLigada();
-            agendarReinicioDiario();
-
-            if (CONFIG.playlistUrl) {
-                setInterval(atualizarPlaylist, CONFIG.atualizarPlaylistMin * 60 * 1000);
-            }
-            tocarProximo();
+// Rolagem automática suave quando há mais nomes do que cabem na tela
+let rolagem = null;
+function iniciarRolagem() {
+    const el = $('lista-aniv');
+    let pausa = 0, dir = 1;
+    clearInterval(rolagem);
+    rolagem = setInterval(() => {
+        if (el.scrollHeight <= el.clientHeight + 2) return;
+        if (pausa > 0) { pausa--; return; }
+        el.scrollTop += dir;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1 || el.scrollTop <= 0) {
+            dir = -dir; pausa = 60; // ~3s parado nas pontas
         }
+    }, 50);
+}
 
-        document.getElementById('btn-iniciar').addEventListener('click', iniciarTV);
-        document.getElementById('btn-pular').addEventListener('click', pular);
+function enviarCSV(arquivo) {
+    if (!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = () => {
+        let texto;
+        try { texto = new TextDecoder('utf-8', { fatal: true }).decode(leitor.result); }
+        catch (e) { texto = new TextDecoder('windows-1252').decode(leitor.result); } // CSV do Excel
+        try { localStorage.setItem(CHAVE_CSV, texto); } catch (e) { console.warn('Não foi possível salvar o CSV:', e); }
+        aniversariantes = parseCSV(texto);
+        renderAniversariantes();
+    };
+    leitor.readAsArrayBuffer(arquivo);
+}
 
-        document.addEventListener('keydown', e => {
-            if (!iniciada) {
-                // Enter/OK do controle remoto inicia
-                if (e.key === 'Enter' || e.key === ' ') iniciarTV();
-                return;
-            }
-            // Seta → ou botão de avançar do controle pulam para o próximo
-            if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext' ||
-                e.key === 'MediaFastForward' || e.keyCode === 417) {
-                pular();
-            }
-        });
+$('btn-csv').addEventListener('click', () => $('arquivo-csv').click());
+$('arquivo-csv').addEventListener('change', e => { enviarCSV(e.target.files[0]); e.target.value = ''; });
 
-        // Modo quiosque: abra com ?auto=1 para iniciar sem clicar (o vídeo é mudo, então o navegador permite)
-        (async function boot() {
-            await atualizarPlaylist();
-            let auto = new URLSearchParams(location.search).has('auto');
-            try {
-                if (sessionStorage.getItem('tv-auto')) auto = true;
-            } catch (e) {}
-            if (auto) iniciarTV();
-            
-            // ============================================================
-            // 📺 CONSOLE LOG DA PLAYLIST COMPLETA
-            // ============================================================
-            console.log('📺 ===== PLAYLIST CARREGADA =====');
-            console.log('Total de itens:', playlist.length);
-            console.log('Playlist completa:');
-            console.table(playlist);
-            console.log('JSON formatado:');
-            console.log(JSON.stringify(playlist, null, 2));
-            console.log('================================');
-        })();
-    </script>
+// =========================================================
+// 🖥️ Tela ligada / reinício diário / início
+// =========================================================
+async function manterTelaLigada() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
+    catch (err) { console.log('Wake Lock indisponível:', err); }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && iniciada) manterTelaLigada();
+});
+
+function agendarReinicioDiario() {
+    if (!CONFIG.reiniciarPaginaAs) return;
+    const [h, m] = CONFIG.reiniciarPaginaAs.split(':').map(Number);
+    const alvo = new Date();
+    alvo.setHours(h, m, 0, 0);
+    if (alvo <= new Date()) alvo.setDate(alvo.getDate() + 1);
+    setTimeout(() => {
+        try { sessionStorage.setItem('tv-auto', '1'); } catch (e) {}
+        location.reload();
+    }, alvo - new Date());
+}
+
+function iniciarTV() {
+    if (iniciada) return;
+    iniciada = true;
+
+    $('start-screen').style.display = 'none';
+    $('tv-display').classList.add('on');
+
+    const raiz = document.documentElement;
+    if (raiz.requestFullscreen && !document.fullscreenElement) raiz.requestFullscreen().catch(() => {});
+
+    manterTelaLigada();
+    agendarReinicioDiario();
+    iniciarRolagem();
+
+    if (CONFIG.playlistUrl) setInterval(atualizarPlaylist, CONFIG.atualizarPlaylistMin * 60 * 1000);
+    tocarProximo();
+}
+
+$('btn-iniciar').addEventListener('click', iniciarTV);
+$('btn-pular').addEventListener('click', pular);
+
+document.addEventListener('keydown', e => {
+    if (!iniciada) {
+        if (e.key === 'Enter' || e.key === ' ') iniciarTV(); // OK do controle inicia
+        return;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext' || e.key === 'MediaFastForward' || e.keyCode === 417) pular();
+    if (e.key === 'u' || e.key === 'U') $('arquivo-csv').click();
+});
+
+// Modo quiosque: abra com ?auto=1 para iniciar sem clicar
+(async function boot() {
+    $('clima-titulo').textContent = 'Clima · ' + CONFIG.cidade;
+    atualizarRelogio();
+    setInterval(atualizarRelogio, 1000);
+
+    atualizarClima();
+    setInterval(atualizarClima, CONFIG.atualizarClimaMin * 60 * 1000);
+
+    carregarAniversariantes();
+    setInterval(carregarAniversariantes, CONFIG.atualizarAnivMin * 60 * 1000);
+
+    await atualizarPlaylist();
+    let auto = new URLSearchParams(location.search).has('auto');
+    try { if (sessionStorage.getItem('tv-auto')) auto = true; } catch (e) {}
+    if (auto) iniciarTV();
+
+    console.log('📺 Playlist carregada:', playlist.length, 'itens');
+    console.table(playlist);
+})();
+</script>
 </body>
 </html>
