@@ -2,7 +2,7 @@
 // ⚙️ CONFIGURAÇÕES
 // =========================================================
 const CONFIG = {
-    playlistUrl: null,            // ex.: 'playlist.json' (JSON). null = usa PLAYLIST_PADRAO
+    playlistUrl: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/playlist.json',            // ex.: 'playlist.json' (JSON). null = usa PLAYLIST_PADRAO
     atualizarPlaylistMin: 5,
     transicaoMs: 1500,
     duracaoPadraoImagemSeg: 10,
