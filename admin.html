@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · TV Corporativa</title>
+<style>
+    :root { --bg:#070d16; --card:#0f1923; --borda:#1b2a38; --texto:#f2f6fa; --suave:#8fa3b5; --acento:#14d9c4; --erro:#ff6b6b; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--texto); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+    header { position:sticky; top:0; z-index:10; display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;
+             padding:.8rem 1rem; background:rgba(7,13,22,.95); border-bottom:1px solid var(--borda); }
+    header h1 { font-size:1.05rem; margin:0 auto 0 0; }
+    #status { font-size:.85rem; color:var(--suave); }
+    #status.erro { color:var(--erro); } #status.ok { color:var(--acento); }
+    main { max-width:860px; margin:0 auto; padding:1rem; }
+    button { font:inherit; color:var(--texto); background:#17232f; border:1px solid var(--borda); border-radius:8px; padding:.45rem .8rem; cursor:pointer; }
+    button:hover { border-color:var(--acento); }
+    button.primario { background:var(--acento); color:#04211e; border-color:var(--acento); font-weight:700; }
+    button.primario:disabled { opacity:.4; cursor:default; }
+
+    .item { display:grid; grid-template-columns:auto 96px 1fr auto; gap:.8rem; align-items:start;
+            background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:.8rem; margin-bottom:.7rem; }
+    .item.arrastando { opacity:.4; }
+    .item.alvo { border-color:var(--acento); }
+    .alca { cursor:grab; color:var(--suave); font-size:1.3rem; user-select:none; padding:.2rem; }
+    .thumb { width:96px; height:60px; border-radius:6px; background:#0a121b; display:flex; align-items:center; justify-content:center;
+             color:var(--suave); font-size:.75rem; overflow:hidden; }
+    .thumb img { width:100%; height:100%; object-fit:cover; }
+    .campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.5rem; }
+    .campos .larga { grid-column:1/-1; }
+    label { display:flex; flex-direction:column; gap:.2rem; font-size:.72rem; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; }
+    input, select { font:inherit; font-size:.9rem; color:var(--texto); background:#0a121b; border:1px solid var(--borda); border-radius:6px; padding:.4rem .5rem; width:100%; }
+    input:focus, select:focus { outline:none; border-color:var(--acento); }
+    .acoes { display:flex; flex-direction:column; gap:.3rem; }
+    .acoes button { padding:.3rem .6rem; }
+    .vazio { text-align:center; color:var(--suave); padding:2rem; }
+    .num { color:var(--acento); font-weight:700; font-size:.8rem; }
+
+    #login { max-width:340px; margin:20vh auto; display:none; flex-direction:column; gap:.6rem; }
+    @media (max-width:640px) { .item { grid-template-columns:auto 1fr auto; } .thumb { display:none; } }
+</style>
+</head>
+<body>
+
+<div id="login">
+    <h1 style="margin:0 0 .4rem">Admin · TV Corporativa</h1>
+    <input id="email" type="email" placeholder="E-mail">
+    <input id="senha" type="password" placeholder="Senha">
+    <button class="primario" id="btn-login">Entrar</button>
+    <div id="login-msg" class="erro" style="color:var(--erro);font-size:.85rem"></div>
+</div>
+
+<div id="app" style="display:none">
+    <header>
+        <h1>Playlist da TV</h1>
+        <span id="status"></span>
+        <button id="btn-add">+ Adicionar item</button>
+        <button id="btn-importar" title="Carrega um playlist.json do seu computador para editar">Importar JSON</button>
+        <input type="file" id="arquivo-json" accept=".json,application/json" style="display:none">
+        <button id="btn-copiar" title="Copia o JSON para a área de transferência">Copiar JSON</button>
+        <button id="btn-salvar" class="primario" disabled>Salvar</button>
+    </header>
+    <main><div id="lista"></div></main>
+</div>
+
+<script type="module">
+// =========================================================
+// ⚙️ CONFIGURAÇÃO — escolha UM modo
+// =========================================================
+const CONFIG = {
+    modo: 'aws',   // 'aws' ou 'firebase'
+
+    // --- modo AWS ---
+    playlistUrl: 'https://dblpl.s3.us-east-1.amazonaws.com/TV-Corporativa/playlist.json', // de onde LER
+    lambdaUrl:   'https://bqxcdejtlrxfjqro6t35erteaq0jhrgk.lambda-url.us-east-1.on.aws/',                                  // para onde SALVAR
+
+    // --- modo Firebase (copie do console: Configurações do projeto > Seus apps > Web) ---
+    firebase: {
+        apiKey: '', authDomain: '', projectId: '', appId: ''
+    }
+};
+
+// =========================================================
+// 💾 CAMADA DE DADOS (carregar / salvar)
+// =========================================================
+const $ = id => document.getElementById(id);
+let fb = null; // guarda auth/db/funções do Firebase
+
+const dados = {
+    async carregar() {
+        if (CONFIG.modo === 'firebase') {
+            const snap = await fb.getDoc(fb.doc(fb.db, 'config', 'playlist'));
+            return snap.exists() ? (snap.data().itens || []) : [];
+        }
+        const r = await fetch(CONFIG.playlistUrl + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return await r.json();
+    },
+    async salvar(itens) {
+        if (CONFIG.modo === 'firebase') {
+            await fb.setDoc(fb.doc(fb.db, 'config', 'playlist'), { itens });
+            return;
+        }
+        let senha = sessionStorage.getItem('adm-senha') || prompt('Senha do painel:');
+        if (!senha) throw new Error('Senha não informada');
+        const r = await fetch(CONFIG.lambdaUrl, {
+            method: 'POST',
+            headers: { 'Authorization': senha, 'Content-Type': 'application/json' },
+            body: JSON.stringify(itens, null, 2)
+        });
+        if (r.status === 401) { sessionStorage.removeItem('adm-senha'); throw new Error('Senha incorreta'); }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        sessionStorage.setItem('adm-senha', senha);
+    }
+};
+
+async function iniciarFirebase() {
+    const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
+    const [{ initializeApp }, A, F] = await Promise.all([
+        import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')
+    ]);
+    const app = initializeApp(CONFIG.firebase);
+    fb = { auth: A.getAuth(app), db: F.getFirestore(app), doc: F.doc, getDoc: F.getDoc, setDoc: F.setDoc };
+    $('login').style.display = 'flex';
+    $('btn-login').onclick = async () => {
+        try { await A.signInWithEmailAndPassword(fb.auth, $('email').value, $('senha').value); }
+        catch (e) { $('login-msg').textContent = 'E-mail ou senha incorretos.'; }
+    };
+    A.onAuthStateChanged(fb.auth, u => { if (u) { $('login').style.display = 'none'; abrirApp(); } });
+}
+
+// =========================================================
+// 🧰 ESTADO E AUXILIARES
+// =========================================================
+let itens = [];
+let sujo = false;
+
+function status(msg, tipo = '') { const s = $('status'); s.textContent = msg; s.className = tipo; }
+function marcarSujo(v = true) {
+    sujo = v;
+    $('btn-salvar').disabled = !v;
+    if (v) status('Alterações não salvas');
+}
+window.addEventListener('beforeunload', e => { if (sujo) { e.preventDefault(); e.returnValue = ''; } });
+
+// 'DD/MM/AAAA HH:MM:SS'  <->  'AAAA-MM-DDTHH:MM' (campo datetime-local)
+function brParaLocal(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/.exec(s || '');
+    return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4] || '00'}:${m[5] || '00'}` : '';
+}
+function localParaBr(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || '');
+    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}:00` : '';
+}
+
+// Monta o JSON final, omitindo campos vazios
+function montarJSON() {
+    return itens.map(i => {
+        const o = { tipo: i.tipo, url: (i.url || '').trim() };
+        if (i.duracao > 0) o.duracao = +i.duracao;
+        if (i.ajuste === 'cover') o.ajuste = 'cover';
+        if (i.dataInicio) o.dataInicio = i.dataInicio;
+        if (i.dataFim) o.dataFim = i.dataFim;
+        return o;
+    });
+}
+
+function mover(de, para) {
+    if (para < 0 || para >= itens.length || de === para) return;
+    itens.splice(para, 0, itens.splice(de, 1)[0]);
+    marcarSujo(); render();
+}
+
+// =========================================================
+// 🖼️ INTERFACE
+// =========================================================
+function campo(rotulo, el, larga) {
+    const l = document.createElement('label');
+    l.textContent = rotulo; l.appendChild(el);
+    if (larga) l.className = 'larga';
+    return l;
+}
+function input(tipo, valor, aoMudar, extra = {}) {
+    const el = document.createElement('input');
+    el.type = tipo; el.value = valor ?? '';
+    Object.assign(el, extra);
+    el.addEventListener('input', () => { aoMudar(el.value); marcarSujo(); });
+    return el;
+}
+
+function miniatura(item, box) {
+    box.innerHTML = '';
+    if (item.tipo === 'image' && item.url) {
+        const img = document.createElement('img'); img.src = item.url; img.alt = '';
+        img.onerror = () => { box.textContent = 'sem prévia'; };
+        box.appendChild(img);
+    } else {
+        box.textContent = item.tipo === 'video' ? '🎬 vídeo' : 'sem prévia';
+    }
+}
+
+let arrastando = null;
+
+function render() {
+    const lista = $('lista');
+    lista.innerHTML = '';
+    if (!itens.length) { lista.innerHTML = '<div class="vazio">Playlist vazia. Clique em “+ Adicionar item”.</div>'; return; }
+
+    itens.forEach((item, i) => {
+        const card = document.createElement('div');
+        card.className = 'item';
+
+        const alca = document.createElement('div');
+        alca.className = 'alca'; alca.textContent = '⠿'; alca.title = 'Arraste para reordenar';
+        alca.addEventListener('mousedown', () => { card.draggable = true; });
+        alca.addEventListener('mouseup', () => { card.draggable = false; });
+        card.addEventListener('dragstart', e => { arrastando = i; card.classList.add('arrastando'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', i); });
+        card.addEventListener('dragend', () => { card.draggable = false; card.classList.remove('arrastando'); });
+        card.addEventListener('dragover', e => { e.preventDefault(); card.classList.add('alvo'); });
+        card.addEventListener('dragleave', () => card.classList.remove('alvo'));
+        card.addEventListener('drop', e => { e.preventDefault(); card.classList.remove('alvo'); if (arrastando !== null) mover(arrastando, i); arrastando = null; });
+
+        const thumb = document.createElement('div'); thumb.className = 'thumb';
+        miniatura(item, thumb);
+
+        const campos = document.createElement('div'); campos.className = 'campos';
+        const num = document.createElement('div'); num.className = 'num larga'; num.textContent = '#' + (i + 1);
+        campos.appendChild(num);
+
+        const sel = document.createElement('select');
+        [['image', 'Imagem'], ['video', 'Vídeo']].forEach(([v, t]) => {
+            const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
+        });
+        sel.value = item.tipo;
+        sel.addEventListener('change', () => { item.tipo = sel.value; marcarSujo(); miniatura(item, thumb); });
+        campos.appendChild(campo('Tipo', sel));
+
+        campos.appendChild(campo('Duração (seg)', input('number', item.duracao || '', v => item.duracao = v, { min: 0, placeholder: 'padrão' })));
+
+        const aj = document.createElement('select');
+        [['contain', 'Sem cortes'], ['cover', 'Preencher tela']].forEach(([v, t]) => {
+            const o = document.createElement('option'); o.value = v; o.textContent = t; aj.appendChild(o);
+        });
+        aj.value = item.ajuste === 'cover' ? 'cover' : 'contain';
+        aj.addEventListener('change', () => { item.ajuste = aj.value; marcarSujo(); });
+        campos.appendChild(campo('Ajuste', aj));
+
+        const url = input('url', item.url, v => item.url = v, { placeholder: 'https://...' });
+        url.addEventListener('change', () => miniatura(item, thumb));
+        campos.appendChild(campo('URL da mídia', url, true));
+
+        campos.appendChild(campo('Começa em', input('datetime-local', brParaLocal(item.dataInicio), v => item.dataInicio = localParaBr(v))));
+        campos.appendChild(campo('Termina em', input('datetime-local', brParaLocal(item.dataFim), v => item.dataFim = localParaBr(v))));
+
+        const acoes = document.createElement('div'); acoes.className = 'acoes';
+        const bSobe = document.createElement('button'); bSobe.textContent = '↑'; bSobe.title = 'Subir'; bSobe.onclick = () => mover(i, i - 1);
+        const bDesce = document.createElement('button'); bDesce.textContent = '↓'; bDesce.title = 'Descer'; bDesce.onclick = () => mover(i, i + 1);
+        const bDel = document.createElement('button'); bDel.textContent = '🗑'; bDel.title = 'Remover';
+        bDel.onclick = () => { if (confirm('Remover este item?')) { itens.splice(i, 1); marcarSujo(); render(); } };
+        acoes.append(bSobe, bDesce, bDel);
+
+        card.append(alca, thumb, campos, acoes);
+        lista.appendChild(card);
+    });
+}
+
+// =========================================================
+// ▶️ AÇÕES
+// =========================================================
+$('btn-add').onclick = () => {
+    itens.push({ tipo: 'image', url: '' });
+    marcarSujo(); render();
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+};
+
+$('btn-copiar').onclick = async () => {
+    try { await navigator.clipboard.writeText(JSON.stringify(montarJSON(), null, 2)); status('JSON copiado', 'ok'); }
+    catch (e) { status('Não foi possível copiar', 'erro'); }
+};
+
+$('btn-salvar').onclick = async () => {
+    const semUrl = itens.findIndex(i => !(i.url || '').trim());
+    if (semUrl !== -1) { status(`Item #${semUrl + 1} está sem URL`, 'erro'); return; }
+    $('btn-salvar').disabled = true; status('Salvando…');
+    try {
+        await dados.salvar(montarJSON());
+        marcarSujo(false);
+        status('Salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 'ok');
+    } catch (e) {
+        console.error(e); status('Erro ao salvar: ' + e.message, 'erro'); $('btn-salvar').disabled = false;
+    }
+};
+
+// Importa um playlist.json do computador para a lista de edição
+$('btn-importar').onclick = () => $('arquivo-json').click();
+$('arquivo-json').onchange = e => {
+    const arq = e.target.files[0];
+    e.target.value = '';
+    if (!arq) return;
+    const leitor = new FileReader();
+    leitor.onload = () => {
+        let lista;
+        try { lista = JSON.parse(String(leitor.result).replace(/^\uFEFF/, '')); }
+        catch (err) { status('O arquivo não é um JSON válido', 'erro'); return; }
+        if (!Array.isArray(lista)) { status('O JSON precisa ser uma lista de itens', 'erro'); return; }
+
+        const novos = lista
+            .filter(i => i && (i.tipo === 'image' || i.tipo === 'video') && typeof i.url === 'string' && i.url.trim())
+            .map(i => ({ ...i }));
+        const ignorados = lista.length - novos.length;
+        if (!novos.length) { status('Nenhum item válido no arquivo', 'erro'); return; }
+
+        if (itens.length && confirm('Substituir a lista atual pelos ' + novos.length + ' itens do arquivo?\n\nOK = substituir · Cancelar = adicionar ao final')) {
+            itens = novos;
+        } else {
+            itens = itens.concat(novos);
+        }
+        marcarSujo(); render();
+        status(novos.length + ' itens importados' + (ignorados ? ' (' + ignorados + ' ignorados)' : '') + ' — lembre de salvar');
+    };
+    leitor.readAsText(arq);
+};
+
+async function abrirApp() {
+    $('app').style.display = 'block';
+    status('Carregando…');
+    try {
+        itens = (await dados.carregar()).map(i => ({ ...i }));
+        status(''); render();
+    } catch (e) {
+        console.error(e); status('Não foi possível carregar a playlist: ' + e.message, 'erro');
+        itens = []; render();
+    }
+}
+
+if (CONFIG.modo === 'firebase') iniciarFirebase(); else abrirApp();
+</script>
+</body>
+</html>
