@@ -158,6 +158,7 @@ function localParaBr(v) {
 function montarJSON() {
     return itens.map(i => {
         const o = { tipo: i.tipo, url: (i.url || '').trim() };
+        if ((i.nome || '').trim()) o.nome = i.nome.trim();
         if (i.duracao > 0) o.duracao = +i.duracao;
         if (i.ajuste === 'cover') o.ajuste = 'cover';
         if (i.dataInicio) o.dataInicio = i.dataInicio;
@@ -228,6 +229,15 @@ function render() {
         const num = document.createElement('div'); num.className = 'num larga'; num.textContent = '#' + (i + 1);
         campos.appendChild(num);
 
+        campos.appendChild(campo(
+            item.tipo === 'video' ? 'Nome do vídeo (só no admin)' : 'Nome (só no admin)',
+            input('text', item.nome || '', v => item.nome = v, {
+                placeholder: item.tipo === 'video' ? 'Ex.: DS Administrativo' : 'Ex.: Aviso Sala de Reunião',
+                maxLength: 120
+            }),
+            true
+        ));
+
         const sel = document.createElement('select');
         [['image', 'Imagem'], ['video', 'Vídeo']].forEach(([v, t]) => {
             const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
@@ -269,7 +279,7 @@ function render() {
 // ▶️ AÇÕES
 // =========================================================
 $('btn-add').onclick = () => {
-    itens.push({ tipo: 'image', url: '' });
+    itens.push({ tipo: 'image', nome: '', url: '' });
     marcarSujo(); render();
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 };
