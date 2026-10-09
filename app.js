@@ -252,6 +252,40 @@ function atualizarRelogio() {
 }
 
 // =========================================================
+// 🌦️ CLIMA (Open-Meteo)
+// =========================================================
+function descreverClima(c) {
+    if (c === 0) return ['Céu limpo', '☀️'];
+    if (c <= 2) return ['Parcialmente nublado', '⛅'];
+    if (c === 3) return ['Nublado', '☁️'];
+    if (c === 45 || c === 48) return ['Neblina', '🌫️'];
+    if (c >= 51 && c <= 57) return ['Garoa', '🌦️'];
+    if (c >= 61 && c <= 67) return ['Chuva', '🌧️'];
+    if (c >= 71 && c <= 77) return ['Neve', '❄️'];
+    if (c >= 80 && c <= 82) return ['Pancadas de chuva', '🌧️'];
+    if (c >= 95) return ['Tempestade', '⛈️'];
+    return ['—', '⛅'];
+}
+
+async function atualizarClima() {
+    try {
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + CONFIG.latitude +
+            '&longitude=' + CONFIG.longitude +
+            '&current=temperature_2m,weather_code,wind_speed_10m' +
+            '&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo';
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const j = await resp.json();
+        const [desc, icone] = descreverClima(j.current.weather_code);
+        $('clima-temp').textContent = Math.round(j.current.temperature_2m) + '°';
+        $('clima-desc').textContent = desc;
+        $('clima-icone').textContent = icone;
+        $('clima-extra').innerHTML = 'Máx ' + Math.round(j.daily.temperature_2m_max[0]) + '° · Mín ' +
+            Math.round(j.daily.temperature_2m_min[0]) + '°<br>Vento ' + Math.round(j.current.wind_speed_10m) + ' km/h';
+    } catch (err) { console.warn('Clima indisponível, mantendo o último valor:', err); }
+}
+
+// =========================================================
 // 🎂 ANIVERSARIANTES (CSV)
 // Formato: nome;data;setor   (setor é opcional; separador "," ou ";")
 // Data aceita: DD/MM, DD/MM/AAAA ou AAAA-MM-DD. Linha de cabeçalho é ignorada.
@@ -419,8 +453,12 @@ document.addEventListener('keydown', e => {
 });
 
 (async function boot() {
+    $('clima-titulo').textContent = 'Clima · ' + CONFIG.cidade;
     atualizarRelogio();
     setInterval(atualizarRelogio, 1000);
+
+    atualizarClima();
+    setInterval(atualizarClima, CONFIG.atualizarClimaMin * 60 * 1000);
 
     carregarAniversariantes();
     setInterval(carregarAniversariantes, CONFIG.atualizarAnivMin * 60 * 1000);
