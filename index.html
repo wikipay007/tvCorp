@@ -83,11 +83,6 @@
     }
     .rotulo > span { display: flex; align-items: center; gap: .5rem; }
 
-    #clima-corpo { display: flex; justify-content: space-between; align-items: flex-end; margin-top: .9rem; }
-    #clima-temp { font-size: 4.6rem; font-weight: 800; line-height: 1; }
-    #clima-desc { margin-top: .5rem; font-size: 1.15rem; }
-    #clima-extra { text-align: right; font-size: .95rem; color: var(--suave); line-height: 1.6; }
-
     #aniv {
         flex: 1; display: flex; flex-direction: column; min-height: 0;
         background: linear-gradient(160deg, #0f1f2b 0%, #0f1923 60%);
@@ -140,17 +135,6 @@
             <div id="data"></div>
         </div>
 
-        <div class="painel">
-            <div class="rotulo"><span><span id="clima-icone">⛅</span><span id="clima-titulo"></span></span></div>
-            <div id="clima-corpo">
-                <div>
-                    <div id="clima-temp">--°</div>
-                    <div id="clima-desc">Carregando…</div> 
-                </div>
-                <div id="clima-extra"></div>
-            </div>
-        </div>
-
         <div id="aniv" class="painel">
             <div class="rotulo">
                 <span><span>🎂</span><span id="aniv-titulo">Aniversariantes</span></span>
@@ -166,3 +150,4 @@
 <script src="app.js"></script>
 </body>
 </html>
+
