@@ -15,7 +15,7 @@
         background: var(--bg); color: var(--texto); overflow: hidden;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
-    html { font-size: clamp(10px, .8334vw, 40px); }
+    html { font-size: clamp(10px, .8334vw, 40px); } /* 16px em 1920px: tudo escala com a tela */
 
     #start-screen {
         position: absolute; inset: 0; z-index: 100;
@@ -29,10 +29,12 @@
     #start-screen button:hover { background: #218838; }
     #start-screen button:focus-visible { outline: none; border-color: #fff; }
 
+    /* ---------- Layout principal ---------- */
     #tv-display {
         display: none; box-sizing: border-box; width: 100vw; height: 100vh;
         padding: .8rem; gap: .8rem;
         grid-template-columns: 1fr 26rem;
+        /*cursor: none; 8*/
     }
     #tv-display.on { display: grid; }
 
@@ -41,6 +43,7 @@
         border-radius: 1.2rem; box-sizing: border-box; min-height: 0; min-width: 0;
     }
 
+    /* ---------- Mídia ---------- */
     #palco { position: relative; overflow: hidden; }
     #media-container { position: absolute; inset: 0; }
     .media-item {
@@ -57,6 +60,7 @@
     #vazio h1 { margin: 0 0 .4rem; font-size: 2.6rem; }
     #vazio p { margin: 0; color: var(--suave); font-size: 1.1rem; }
 
+    /* Botão de pular: quase transparente */
     #btn-pular {
         position: absolute; right: 1rem; bottom: 1rem; z-index: 50;
         width: 2.5rem; height: 2.5rem; padding: 0; font-size: 1rem; color: #fff;
@@ -66,6 +70,7 @@
     #btn-pular:hover, #btn-pular:focus-visible { opacity: .7; outline: none; }
     #btn-pular:focus-visible { border-color: #fff; }
 
+    /* ---------- Barra lateral ---------- */
     #lateral { display: flex; flex-direction: column; gap: .8rem; min-height: 0; }
     #lateral .painel { padding: 1.3rem 1.4rem; }
 
@@ -140,7 +145,7 @@
             <div id="clima-corpo">
                 <div>
                     <div id="clima-temp">--°</div>
-                    <div id="clima-desc" aria-live="polite"></div>
+                    <div id="clima-desc">Carregando…</div> 
                 </div>
                 <div id="clima-extra"></div>
             </div>
