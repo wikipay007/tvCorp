@@ -78,6 +78,21 @@
         display: grid;
     }
 
+    #tv-display.modo-expandido {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0;
+        gap: 0;
+    }
+
+    #tv-display.modo-expandido #lateral {
+        display: none;
+    }
+
+    #tv-display.modo-expandido #palco {
+        border: 0;
+        border-radius: 0;
+    }
+
     .painel {
         background: var(--card);
         border: 1px solid var(--borda);
@@ -139,9 +154,9 @@
     }
 
     /* ---------- Botão de pular ---------- */
+    #btn-tela-cheia,
     #btn-pular {
         position: absolute;
-        right: 1rem;
         bottom: 1rem;
         z-index: 50;
         width: 2.5rem;
@@ -157,12 +172,23 @@
         transition: opacity .3s;
     }
 
+    #btn-tela-cheia {
+        right: 4rem;
+    }
+
+    #btn-pular {
+        right: 1rem;
+    }
+
+    #btn-tela-cheia:hover,
+    #btn-tela-cheia:focus-visible,
     #btn-pular:hover,
     #btn-pular:focus-visible {
         opacity: .7;
         outline: none;
     }
 
+    #btn-tela-cheia:focus-visible,
     #btn-pular:focus-visible {
         border-color: #fff;
     }
@@ -351,7 +377,16 @@
         </div>
 
         <button
+            id="btn-tela-cheia"
+            type="button"
+            title="Expandir mídia"
+            aria-label="Expandir mídia"
+            aria-pressed="false"
+        >⛶</button>
+
+        <button
             id="btn-pular"
+            type="button"
             title="Próximo"
             aria-label="Próximo item"
         >▶▶</button>
@@ -417,4 +452,3 @@
 
 </body>
 </html>
-

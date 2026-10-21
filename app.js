@@ -322,6 +322,16 @@ function pular() {
     if (iniciada) tocarProximo();
 }
 
+function alternarTelaCheia() {
+    const expandido = $('tv-display').classList.toggle('modo-expandido');
+    const botao = $('btn-tela-cheia');
+    const acao = expandido ? 'Restaurar barra lateral' : 'Expandir mídia';
+
+    botao.setAttribute('aria-pressed', String(expandido));
+    botao.setAttribute('aria-label', acao);
+    botao.title = acao;
+}
+
 async function atualizarPlaylist() {
     if (!CONFIG.playlistUrl) return;
 
@@ -768,6 +778,7 @@ function iniciarTV() {
 
 $('btn-iniciar').addEventListener('click', iniciarTV);
 $('btn-pular').addEventListener('click', pular);
+$('btn-tela-cheia').addEventListener('click', alternarTelaCheia);
 
 document.addEventListener('keydown', e => {
     if (!iniciada) {
