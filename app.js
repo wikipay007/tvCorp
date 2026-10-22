@@ -16,7 +16,7 @@ const CONFIG = {
     atualizarClimaMin: 15,
 
     // Aniversariantes
-    aniversariantesUrl: './aniversariantes_outubro.csv',
+    aniversariantesUrl: './aniversariantes_outbro.csv',
     atualizarAnivMin: 30
 };
 
@@ -528,7 +528,15 @@ function parseCSV(texto) {
 
 function renderAniversariantes() {
     const hoje = new Date();
-    const mes = hoje.getMonth() + 1;
+    const mesAtual = hoje.getMonth() + 1;
+    const mesesDisponiveis = [
+        ...new Set(aniversariantes.map(a => a.mes))
+    ];
+    const mes = mesesDisponiveis.includes(mesAtual)
+        ? mesAtual
+        : mesesDisponiveis.sort((a, b) =>
+            ((a - mesAtual + 12) % 12) - ((b - mesAtual + 12) % 12)
+        )[0] || mesAtual;
 
     $('aniv-titulo').textContent =
         'Aniversariantes de ' + MESES[mes - 1];
@@ -559,9 +567,9 @@ function renderAniversariantes() {
 
         item.className =
             'aniv-item' +
-            (a.dia === hoje.getDate()
+            (a.mes === mesAtual && a.dia === hoje.getDate()
                 ? ' hoje'
-                : a.dia < hoje.getDate()
+                : a.mes === mesAtual && a.dia < hoje.getDate()
                     ? ' passou'
                     : '');
 
@@ -576,7 +584,11 @@ function renderAniversariantes() {
 
         nome.className = 'aniv-nome';
         nome.textContent =
-            a.nome + (a.dia === hoje.getDate() ? ' 🎉' : '');
+            a.nome + (
+                a.mes === mesAtual && a.dia === hoje.getDate()
+                    ? ' 🎉'
+                    : ''
+            );
 
         info.appendChild(nome);
 
