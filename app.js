@@ -16,7 +16,7 @@ const CONFIG = {
     atualizarClimaMin: 15,
 
     // Aniversariantes
-    aniversariantesUrl: './aniversariantes_outbro.csv',
+    aniversariantesUrl: './aniversariantes_outubro.csv',
     atualizarAnivMin: 30
 };
 
